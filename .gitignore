@@ -1,0 +1,18 @@
+# Dataset — lives on Google Drive, pulled into Colab at runtime, not committed here
+data/iu_xray/
+data/*.jsonl
+
+# Keep the small hand-made sample used to test Phase 2/3 locally
+!data/sample_reports.json
+
+# Training outputs / checkpoints
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS/editor cruft
+.DS_Store
+.vscode/

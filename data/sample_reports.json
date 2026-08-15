@@ -1,0 +1,50 @@
+[
+  {
+    "id": "sample_001",
+    "reference_report": "The heart and mediastinum are unremarkable. The lungs are clear without infiltrate. There is no effusion or pneumothorax.",
+    "generated_report": "The heart size and mediastinal contours appear within normal limits. The lungs are clear. There is no focal airspace opacity. No pleural effusion or pneumothorax is seen.",
+    "classifier_scores": {
+      "Atelectasis": 0.08, "Cardiomegaly": 0.06, "Consolidation": 0.05, "Edema": 0.04,
+      "Effusion": 0.07, "Emphysema": 0.03, "Enlarged Cardiomediastinum": 0.05, "Fibrosis": 0.02,
+      "Fracture": 0.01, "Hernia": 0.01, "Infiltration": 0.06, "Lung Lesion": 0.02,
+      "Lung Opacity": 0.09, "Mass": 0.02, "Nodule": 0.03, "Pleural Thickening": 0.04,
+      "Pneumonia": 0.05, "Pneumothorax": 0.03
+    }
+  },
+  {
+    "id": "sample_002",
+    "reference_report": "There is a moderate right-sided pleural effusion. Mild cardiomegaly is noted. No pneumothorax.",
+    "generated_report": "The heart is normal in size. There is no pleural effusion or pneumothorax. Lungs are clear.",
+    "classifier_scores": {
+      "Atelectasis": 0.15, "Cardiomegaly": 0.61, "Consolidation": 0.10, "Edema": 0.12,
+      "Effusion": 0.74, "Emphysema": 0.05, "Enlarged Cardiomediastinum": 0.22, "Fibrosis": 0.03,
+      "Fracture": 0.01, "Hernia": 0.01, "Infiltration": 0.14, "Lung Lesion": 0.04,
+      "Lung Opacity": 0.20, "Mass": 0.03, "Nodule": 0.04, "Pleural Thickening": 0.10,
+      "Pneumonia": 0.08, "Pneumothorax": 0.04
+    }
+  },
+  {
+    "id": "sample_003",
+    "reference_report": "Lungs are clear without focal consolidation, effusion, or pneumothorax. Normal heart size. Bony thorax is unremarkable.",
+    "generated_report": "The lungs are clear. There is a small nodule in the right upper lobe. No pleural effusion. Heart size is normal. No acute fracture.",
+    "classifier_scores": {
+      "Atelectasis": 0.07, "Cardiomegaly": 0.09, "Consolidation": 0.06, "Edema": 0.05,
+      "Effusion": 0.08, "Emphysema": 0.04, "Enlarged Cardiomediastinum": 0.06, "Fibrosis": 0.03,
+      "Fracture": 0.02, "Hernia": 0.01, "Infiltration": 0.07, "Lung Lesion": 0.05,
+      "Lung Opacity": 0.10, "Mass": 0.06, "Nodule": 0.11, "Pleural Thickening": 0.05,
+      "Pneumonia": 0.04, "Pneumothorax": 0.03
+    }
+  },
+  {
+    "id": "sample_004",
+    "reference_report": "Findings consistent with pneumonia in the right lower lobe. No pleural effusion. Heart size normal.",
+    "generated_report": "The lungs are clear bilaterally. No focal consolidation, pneumothorax, or pleural effusion. Cardiomediastinal silhouette is unremarkable.",
+    "classifier_scores": {
+      "Atelectasis": 0.18, "Cardiomegaly": 0.10, "Consolidation": 0.55, "Edema": 0.09,
+      "Effusion": 0.14, "Emphysema": 0.05, "Enlarged Cardiomediastinum": 0.07, "Fibrosis": 0.04,
+      "Fracture": 0.02, "Hernia": 0.01, "Infiltration": 0.48, "Lung Lesion": 0.06,
+      "Lung Opacity": 0.51, "Mass": 0.04, "Nodule": 0.05, "Pleural Thickening": 0.06,
+      "Pneumonia": 0.68, "Pneumothorax": 0.03
+    }
+  }
+]

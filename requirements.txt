@@ -1,0 +1,24 @@
+# Phase 0 — data prep
+torch>=2.2
+torchvision>=0.17
+torchxrayvision>=1.2          # provides the pretrained "densenet121-res224-all" model used in the paper
+Pillow>=10.0
+pandas>=2.0
+
+# Phase 1 — baseline fine-tuning (run on Colab/Kaggle GPU)
+unsloth @ git+https://github.com/unslothai/unsloth.git
+trl>=0.9
+transformers>=4.42
+peft>=0.11
+bitsandbytes>=0.43
+accelerate>=0.31
+
+# Phase 1 — lexical evaluation (matches the paper's metrics)
+nltk>=3.8
+rouge-score>=0.1.2
+
+# Phase 2/3 — clinical eval + hallucination check
+# (pure stdlib + pandas, no extra deps)
+
+# Phase 4 — dense visual embeddings
+# reuses torch/torchvision/torchxrayvision above
