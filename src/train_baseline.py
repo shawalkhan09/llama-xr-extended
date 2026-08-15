@@ -1,38 +1,27 @@
 """
 Phase 1 -- Baseline reproduction.
 
-Matches the paper's Section 3.5 training setup as closely as the paper specifies:
-  - Base model: LLaMA 3.1 8B, 4-bit quantized, loaded via Unsloth
-  - Method: QLoRA + SFT via trl's SFTTrainer
-  - Batch size 8, gradient accumulation 4 (effective batch size 32)
-  - 3 epochs
-  - Learning rate 2e-6, AdamW 8-bit optimizer
-  - Linear LR schedule, 30 warmup steps
-  - Weight decay 0.01
-  - fp16 mixed precision
-  - Early stopping, best checkpoint restored at the end
-
-NOTE ON LoRA RANK: the paper reports 41,943,040 trainable parameters but does not state
-the LoRA rank (r) or alpha used to get there. r=16 (below) is Unsloth's common default for
-an 8B model and lands in the same order of magnitude -- treat this as the one hyperparameter
-you may need to tune to exactly match their trainable-parameter count, everything else here
-is taken directly from the paper's stated numbers.
-
-Run this on Colab (T4 for a slower run, A100 to match the paper's setup) -- not in a plain
-CPU environment.
+Matches the paper's Section 3.5 training setup as closely as the paper specifies, adapted
+for T4 memory constraints (see note below).
 """
 
+from unsloth import FastLanguageModel  # must be imported first -- before trl/transformers/peft,
+                                        # or Unsloth's tokenizer patches don't apply correctly
+                                        # and eos_token gets corrupted (unslothai/unsloth#2797)
 from datasets import load_dataset
-from transformers import EarlyStoppingCallback, TrainingArguments
-from trl import SFTTrainer
-from unsloth import FastLanguageModel
+from transformers import EarlyStoppingCallback
+from trl import SFTConfig, SFTTrainer
 
 MODEL_NAME = "unsloth/Meta-Llama-3.1-8B-bnb-4bit"
-MAX_SEQ_LENGTH = 2048
-TRAIN_PATH = "data/train.jsonl"  # produced by data_prep.py, from R2Gen's existing train split
-VAL_PATH = "data/val.jsonl"      # from R2Gen's existing val split -- no re-splitting needed,
-                                  # this keeps you on the same patient-level split the paper uses
+MAX_SEQ_LENGTH = 1024  # the paper's radiology reports are short (a few sentences) --
+                        # 2048 was wasted headroom on a memory-constrained GPU
+TRAIN_PATH = "data/train.jsonl"
+VAL_PATH = "data/val.jsonl"
 OUTPUT_DIR = "outputs/llama-xr-baseline"
+
+# NOTE ON GPU: the paper trains on an A100 with per_device_train_batch_size=8. On a free-tier
+# T4 (14.5GB) that OOMs on the very first step. batch_size=2 x grad_accum=16 (below) keeps the
+# same *effective* batch size of 32 as the paper, just spread over more, smaller steps.
 
 ALPACA_TEMPLATE = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
 
@@ -46,12 +35,13 @@ ALPACA_TEMPLATE = """Below is an instruction that describes a task, paired with 
 {output}"""
 
 
-def formatting_func(example):
-    return ALPACA_TEMPLATE.format(
+def add_text_field(example):
+    example["text"] = ALPACA_TEMPLATE.format(
         instruction=example["instruction"],
         input=example["input"],
         output=example["output"],
     )
+    return example
 
 
 def main():
@@ -63,7 +53,7 @@ def main():
 
     model = FastLanguageModel.get_peft_model(
         model,
-        r=16,             # see note above on trainable-parameter count
+        r=16,
         lora_alpha=16,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                          "gate_proj", "up_proj", "down_proj"],
@@ -72,13 +62,15 @@ def main():
         use_gradient_checkpointing=True,
     )
 
-    train_dataset = load_dataset("json", data_files=TRAIN_PATH, split="train")
-    val_dataset = load_dataset("json", data_files=VAL_PATH, split="train")
+    train_dataset = load_dataset("json", data_files=TRAIN_PATH, split="train").map(add_text_field)
+    val_dataset = load_dataset("json", data_files=VAL_PATH, split="train").map(add_text_field)
 
-    training_args = TrainingArguments(
+    sft_config = SFTConfig(
         output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=8,
-        gradient_accumulation_steps=4,       # effective batch size 32
+        per_device_train_batch_size=2,       # was 8 in the paper -- reduced for T4 memory
+        per_device_eval_batch_size=2,
+        gradient_accumulation_steps=16,      # was 4 -- 2 x 16 = 32, same effective batch
+                                              # size as the paper's 8 x 4
         num_train_epochs=3,
         learning_rate=2e-6,
         optim="adamw_8bit",
@@ -87,22 +79,23 @@ def main():
         weight_decay=0.01,
         fp16=True,
         logging_steps=10,
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         eval_steps=50,
         save_strategy="steps",
         save_steps=50,
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
+        max_length=MAX_SEQ_LENGTH,
+        dataset_text_field="text",
+        packing=False,
     )
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
-        formatting_func=formatting_func,
-        max_seq_length=MAX_SEQ_LENGTH,
-        args=training_args,
+        args=sft_config,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)],
     )
 
