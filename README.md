@@ -1,5 +1,8 @@
 # LLaMA-XR Extended — Chest X-ray Report Generation
 
+**See [FINDINGS.md](FINDINGS.md) for the full progress log, technical issues encountered and
+fixed, and the key reproducibility finding on the paper's stated learning rate.**
+
 Reproduction and extension of:
 
 > Jahangir et al., "LLaMA-XR: A Novel Framework for Radiology Report Generation using LLaMA

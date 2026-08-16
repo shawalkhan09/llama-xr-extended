@@ -38,30 +38,61 @@ CONDITIONS = [
 
 # Synonym / surface-form dictionary. Extend this as you see more report phrasing.
 SYNONYMS = {
-    "Atelectasis": ["atelectasis", "atelectatic"],
-    "Cardiomegaly": ["cardiomegaly", "enlarged heart", "heart is enlarged", "cardiac enlargement"],
-    "Consolidation": ["consolidation"],
-    "Edema": ["edema", "oedema", "pulmonary edema"],
-    "Effusion": ["effusion", "pleural effusion"],
-    "Emphysema": ["emphysema", "hyperexpanded lungs", "hyperinflation"],
-    "Enlarged Cardiomediastinum": ["enlarged cardiomediastinum", "mediastinal widening", "widened mediastinum"],
-    "Fibrosis": ["fibrosis", "fibrotic"],
-    "Fracture": ["fracture"],
-    "Hernia": ["hernia"],
-    "Infiltration": ["infiltrate", "infiltration", "infiltrates"],
-    "Lung Lesion": ["lesion", "cavitary lesion"],
-    "Lung Opacity": ["opacity", "opacities", "airspace disease", "focal airspace"],
-    "Mass": [" mass ", "masses"],
-    "Nodule": ["nodule", "nodular", "nodules"],
-    "Pleural Thickening": ["pleural thickening"],
-    "Pneumonia": ["pneumonia"],
-    "Pneumothorax": ["pneumothorax"],
+    "Atelectasis": [
+        "atelectasis", "atelectatic", "subsegmental atelectasis", "plate atelectasis",
+        "linear atelectasis", "volume loss",
+    ],
+    "Cardiomegaly": [
+        "cardiomegaly", "enlarged heart", "heart is enlarged", "cardiac enlargement",
+        "enlarged cardiac silhouette", "heart size is enlarged", "borderline cardiomegaly",
+        "cardiac silhouette is enlarged",
+    ],
+    "Consolidation": [
+        "consolidation", "consolidative", "airspace consolidation", "lobar consolidation",
+        "focal consolidation",
+    ],
+    "Edema": [
+        "edema", "oedema", "pulmonary edema", "vascular congestion", "interstitial edema",
+        "pulmonary vascular congestion", "fluid overload",
+    ],
+    "Effusion": [
+        "effusion", "pleural effusion", "pleural fluid", "fluid in the pleural space",
+        "layering effusion",
+    ],
+    "Emphysema": [
+        "emphysema", "hyperexpanded lungs", "hyperinflation", "hyperinflated lungs",
+        "emphysematous changes", "bullous changes", " bullae",
+    ],
+    "Enlarged Cardiomediastinum": [
+        "enlarged cardiomediastinum", "mediastinal widening", "widened mediastinum",
+        "mediastinal enlargement", "wide mediastinum",
+    ],
+    "Fibrosis": [
+        "fibrosis", "fibrotic", "fibrotic changes", "pulmonary fibrosis", "fibrotic scarring",
+    ],
+    "Fracture": ["fracture", "fractures", "fractured", "rib fracture", "acute fracture"],
+    "Hernia": ["hernia", "hiatal hernia", "diaphragmatic hernia"],
+    "Infiltration": [
+        "infiltrate", "infiltration", "infiltrates", "infiltrative", "pulmonary infiltrate",
+    ],
+    "Lung Lesion": ["lesion", "cavitary lesion", "pulmonary lesion", "lung lesion"],
+    "Lung Opacity": [
+        "opacity", "opacities", "airspace disease", "focal airspace", "airspace opacity",
+        "opacification", "hazy opacity",
+    ],
+    "Mass": [" mass ", "masses", "pulmonary mass", "lung mass"],  # spaces around "mass" avoid
+                                                                    # matching inside "massive"
+    "Nodule": ["nodule", "nodular", "nodules", "pulmonary nodule", "lung nodule"],
+    "Pleural Thickening": ["pleural thickening", "pleural scarring", "thickened pleura"],
+    "Pneumonia": ["pneumonia", "pneumonic", "pneumonic infiltrate"],
+    "Pneumothorax": ["pneumothorax", "collapsed lung", "air in the pleural space"],
 }
 
 NEGATION_CUES = [
     "no ", "no evidence of", "without", "free of", "negative for",
     "clear of", "absence of", "not seen", "is not", "are not", "rule out",
     "unremarkable", "within normal limits", "no focal", "no acute",
+    "no significant", "no definite", "no evidence for", "resolution of", "resolved",
 ]
 
 NEGATION_WINDOW_CHARS = 60  # how far back to look for a negation cue before a mention

@@ -1,0 +1,111 @@
+# Findings & Progress Log
+
+A running record of what was built, what broke, what was learned, and why — for the
+project itself and for anyone reading this repo later.
+
+## Project goal
+
+Reproduce LLaMA-XR (Jahangir et al., 2026, [arXiv:2506.03178](https://arxiv.org/abs/2506.03178)) —
+a framework that fine-tunes LLaMA 3.1 8B with QLoRA to generate chest X-ray radiology reports,
+conditioned on DenseNet-121 classifier scores — then extend it in ways the paper's own
+Limitations section calls for but doesn't do:
+
+1. **Clinical-accuracy evaluation** (the paper only measures BLEU/ROUGE-L/METEOR, which
+   don't verify whether the correct diagnosis was captured)
+2. **Hallucination flagging** (the paper discusses this risk but never builds a check for it)
+3. **Dense visual embeddings** (replacing the paper's 36-number classifier-score bottleneck
+   with real image features) — planned, not yet built
+
+The paper's own code repository contains no released implementation — only a citation and
+README — so everything here is a fresh build from the paper's Methods section, not a fork.
+
+## Status at a glance
+
+| Component | Status |
+|---|---|
+| Data pipeline (Phase 0) | Working, reproducible on both Colab and Kaggle |
+| Baseline reproduction, paper's exact hyperparameters | **Complete — see Key Finding below** |
+| Corrected training run (adjusted LR) | Running now |
+| Clinical-accuracy eval (`eval_clinical.py`) | Built, tested on sample data, ready |
+| Hallucination check (`hallucination_check.py`) | Built, tested on sample data, ready |
+| Inference script (`generate_reports.py`) | Built, verified on 20-example preview |
+| Dense visual embeddings (Phase 4) | Scaffolded only, not implemented |
+
+## Key finding: the paper's stated learning rate does not reproduce
+
+The paper (Section 3.5) states a learning rate of 2×10⁻⁶, batch size 8, gradient
+accumulation 4, and 3 epochs. We matched these settings as closely as our hardware allowed
+(same effective batch size of 32, same 3 epochs, same ~195 total optimizer steps).
+
+**Result: the fine-tuned model failed to learn the task.** Every generated report, regardless
+of the actual input classifier scores, simply recited the full list of 18 condition names
+verbatim — the same list that appears in the fixed instruction text of every training prompt.
+The model was not grounding its output in the input data at all; it was reproducing the most
+salient vocabulary sitting in its own prompt.
+
+**Why:** 2×10⁻⁶ is roughly 100x lower than typical QLoRA learning rates (commonly 1e-4 to
+3e-4). Combined with only ~195 gradient updates total, this was very likely insufficient for
+the LoRA adapter to move the base model's behavior away from that degenerate pattern.
+
+**What we changed:** learning rate raised to 2×10⁻⁴, with the paper's periodic in-training
+evaluation and `load_best_model_at_end=True` restored (these were present in the paper's
+described method but had been removed from our script in an earlier optimization pass for
+speed — restoring them both gives loss-curve visibility and matches the paper's actual
+procedure more closely).
+
+This is a documented, deliberate deviation, not a hidden one — see `train_baseline_v2.py`,
+which is kept as a separate file from the original paper-faithful `train_baseline.py` so both
+attempts remain visible in the repo's history.
+
+*(This section will be updated once the corrected run finishes with actual loss-curve and
+generated-report results.)*
+
+## Engineering notes (useful if reproducing this yourself)
+
+A number of library/environment issues surfaced during this reproduction, worth knowing about
+if you're doing something similar in 2026:
+
+- **`trl`'s `SFTTrainer` API changed significantly** across recent releases: `tokenizer=`
+  became `processing_class=`, `max_seq_length` moved off `SFTTrainer` onto a new `SFTConfig`
+  object as `max_length`, and `TrainingArguments`' `evaluation_strategy` was renamed to
+  `eval_strategy`.
+- **Unsloth must be imported before `trl`/`transformers`/`peft`**, not after — importing it
+  later causes a `ValueError` about the EOS token not being found in the tokenizer's
+  vocabulary. This is a known Unsloth issue (unslothai/unsloth#2797), not obvious from the
+  error message itself.
+- **`torchxrayvision`'s DenseNet-121 classifier defaults to CPU** unless the model and input
+  tensors are explicitly moved to the GPU device — silently falling back to CPU rather than
+  erroring, which turned an expected few-minute step into a 45-60 minute one until caught.
+- **A100 vs. T4 memory**: the paper's batch size of 8 (A100) OOMs immediately on a free-tier
+  T4 (14.5GB). Batch size 2 with gradient accumulation 16 preserves the same effective batch
+  size of 32 while fitting in T4 memory.
+
+## Infrastructure notes
+
+Reproducing an 8B-parameter fine-tune on free-tier compute (Google Colab, then Kaggle after
+hitting Colab's usage limits) surfaces a set of practical constraints that don't show up when
+reading the paper alone:
+
+- Free-tier GPU sessions can disconnect from usage limits or inactivity with no fixed,
+  published threshold — training checkpoints need to be written somewhere that survives a
+  session dying mid-run (Google Drive on Colab; Kaggle's committed Dataset output on Kaggle),
+  not just local/ephemeral session storage.
+- Kaggle's interactive editor sessions have a 1-hour inactivity limit; a proper unattended
+  multi-hour job needs to run as a "Save and Run All (Commit)" batch job instead, which is
+  immune to that limit and persists its output automatically.
+- Standard benchmark splits (here, R2Gen's preprocessed IU X-ray train/val/test split) are
+  worth using over re-deriving your own from the raw dataset archive — the raw XML reports
+  from the original source don't reliably distinguish frontal vs. lateral X-ray views, and
+  using the same split as prior published methods keeps results comparable.
+
+## Next steps
+
+1. Finish the corrected training run (`train_baseline_v2.py`) and confirm the loss curve
+   actually decreases and generated reports are clinically grounded, not degenerate.
+2. Run `generate_reports.py` on the full 590-example test set with the corrected model.
+3. Run `eval_lexical.py`, `eval_clinical.py`, and `hallucination_check.py` on the results;
+   compare lexical scores against the paper's reported ROUGE-L 0.433 / METEOR 0.336, and
+   report the clinical-accuracy numbers the paper never measured.
+4. Decide whether to pursue Phase 4 (dense visual embeddings) as a further extension, based
+   on what `eval_clinical.py`'s per-sample missed/extra findings reveal about where the
+   current 36-number bottleneck is actually costing accuracy.
