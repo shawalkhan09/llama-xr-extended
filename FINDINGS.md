@@ -155,12 +155,13 @@ reading the paper alone:
 
 ## Next steps
 
-1. Finish the corrected training run (`train_baseline_v2.py`) and confirm the loss curve
-   actually decreases and generated reports are clinically grounded, not degenerate.
-2. Run `generate_reports.py` on the full 590-example test set with the corrected model.
-3. Run `eval_lexical.py`, `eval_clinical.py`, and `hallucination_check.py` on the results;
-   compare lexical scores against the paper's reported ROUGE-L 0.433 / METEOR 0.336, and
-   report the clinical-accuracy numbers the paper never measured.
-4. Decide whether to pursue Phase 4 (dense visual embeddings) as a further extension, based
-   on what `eval_clinical.py`'s per-sample missed/extra findings reveal about where the
-   current 36-number bottleneck is actually costing accuracy.
+1. Decide between: (a) writing this up as-is — a complete, honestly-documented reproduction
+   with two real findings and a well-motivated proposed extension — or (b) attempting a fix
+   for the output-collapse problem before writing up, either the cheap input-reformatting
+   experiment or the full Phase 4 dense-embeddings build.
+2. If pursuing a fix: rerun `generate_reports.py` on the full 590-example test set and
+   `eval_lexical.py` / `eval_clinical.py` / `hallucination_check.py` against it, to get
+   final numbers comparable to the paper's reported ROUGE-L 0.433 / METEOR 0.336 plus the
+   clinical-accuracy numbers the paper never measured.
+3. Either way, this findings log plus the working, tested Phase 2/3 eval scripts constitute
+   real, presentable material for a portfolio write-up regardless of which path is taken.
