@@ -95,19 +95,25 @@ NEGATION_CUES = [
     "no significant", "no definite", "no evidence for", "resolution of", "resolved",
 ]
 
-NEGATION_WINDOW_CHARS = 60  # how far back to look for a negation cue before a mention
-
-
 def label_report(text: str) -> dict:
-    """Return {condition: 0 or 1} for a single report's text. 1 = positive finding."""
+    """Return {condition: 0 or 1} for a single report's text. 1 = positive finding.
+
+    Negation scope is bounded by sentence (the last '.' before the mention), not a fixed
+    character count. A fixed window (e.g. 60 chars) misses common radiology phrasing like
+    "No focal consolidation, pneumothorax, or pleural effusion" -- by the time you reach
+    "effusion" at the end of a negated list, you can easily be more than 60 characters past
+    the "No" that negates the whole list. Scoping to the sentence handles lists of any length
+    correctly, while still not reaching back into an unrelated earlier sentence.
+    """
     text_lower = f" {text.lower()} "
     labels = {}
     for condition in CONDITIONS:
         found_positive = False
         for syn in SYNONYMS[condition]:
             for m in re.finditer(re.escape(syn.lower()), text_lower):
-                start = max(0, m.start() - NEGATION_WINDOW_CHARS)
-                window = text_lower[start:m.start()]
+                sentence_start = text_lower.rfind(".", 0, m.start())
+                sentence_start = sentence_start + 1 if sentence_start != -1 else 0
+                window = text_lower[sentence_start:m.start()]
                 negated = any(cue in window for cue in NEGATION_CUES)
                 if not negated:
                     found_positive = True

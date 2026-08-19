@@ -76,7 +76,8 @@ def main():
         prompt = ALPACA_PROMPT.format(instruction=example["instruction"], input=example["input"])
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         output_ids = model.generate(
-            **inputs, max_new_tokens=200, use_cache=True, do_sample=False,
+            **inputs, max_new_tokens=150, use_cache=True, do_sample=False,
+            repetition_penalty=1.3, no_repeat_ngram_size=3,
         )
         generated_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
 

@@ -1,7 +1,7 @@
 # Findings & Progress Log
 
 A running record of what was built, what broke, what was learned, and why — for the
-project itself and for anyone reading this repo later.
+project itself and for anyone (including future-you) reading this repo later.
 
 ## Project goal
 
@@ -24,12 +24,12 @@ README — so everything here is a fresh build from the paper's Methods section,
 | Component | Status |
 |---|---|
 | Data pipeline (Phase 0) | Working, reproducible on both Colab and Kaggle |
-| Baseline reproduction, paper's exact hyperparameters | **Complete — see Key Finding below** |
-| Corrected training run (adjusted LR) | Running now |
-| Clinical-accuracy eval (`eval_clinical.py`) | Built, tested on sample data, ready |
+| Baseline reproduction, paper's exact hyperparameters | Complete — model failed to learn (see Key Finding) |
+| Corrected training run (adjusted LR) | Complete — fixed the degenerate output, but surfaced a second issue (see Second Finding) |
+| Clinical-accuracy eval (`eval_clinical.py`) | Built, negation-detection bug found and fixed, ready |
 | Hallucination check (`hallucination_check.py`) | Built, tested on sample data, ready |
-| Inference script (`generate_reports.py`) | Built, verified on 20-example preview |
-| Dense visual embeddings (Phase 4) | Scaffolded only, not implemented |
+| Inference script (`generate_reports.py`) | Built, decoding fixed (repetition penalty), verified |
+| Dense visual embeddings (Phase 4) | Scaffolded only — now has direct empirical motivation, not yet built |
 
 ## Key finding: the paper's stated learning rate does not reproduce
 
@@ -57,8 +57,63 @@ This is a documented, deliberate deviation, not a hidden one — see `train_base
 which is kept as a separate file from the original paper-faithful `train_baseline.py` so both
 attempts remain visible in the repo's history.
 
-*(This section will be updated once the corrected run finishes with actual loss-curve and
-generated-report results.)*
+The corrected run finished: final eval_loss 0.6966, train_loss 0.841, all 195 steps completed
+cleanly. See the next finding for what the generated text actually looked like.
+
+## Second finding: the model doesn't condition on its input (output collapse)
+
+With the LR fix, the model stopped reciting the instruction's condition list verbatim — a
+real improvement. But a second, distinct problem surfaced once we looked at actual generated
+text closely: **the model produces near-identical output regardless of what's actually in the
+input.**
+
+Evidence, built up in stages to rule out simpler explanations first:
+
+1. Across a 20-example preview, 15/20 generations were exact or near-exact duplicates of one
+   template (opening: *"The heart size appears normal in contour. There has been interval
+   development of left-sided pleuro-pulmonary scarring compatible with prior granulomatous
+   disease or tuberculosis..."*).
+2. Checking whether this was just coincidentally similar inputs: the underlying classifier
+   scores for the duplicated cases were *not* identical, but were very close (differences in
+   the 4th decimal place) — plausible for genuinely normal X-rays, since a pathology
+   classifier would output uniformly low confidence across the board for both.
+3. To rule this out properly, we specifically selected test cases with **genuine, different,
+   described abnormalities** (lung opacity; emphysema + hernia; atelectasis; atelectasis +
+   infiltration; emphysema + infiltration + opacity) — clinically distinct pictures, verified
+   via `eval_clinical.py`'s labeler (after fixing a negation-detection bug in that labeler
+   itself — see below). The model produced the same generic template for all five, ignoring
+   the actual differences between cases.
+
+This rules out both "coincidence" and "labeling error" as explanations. The model has learned
+what a radiology report *sounds like*, but not to ground its content in the actual input
+scores.
+
+**Likely cause**: the 36 raw classifier-confidence floats are serialized as a JSON array
+string in the prompt (e.g. `"[0.599, 0.612, ...]"`). Floating-point numbers get fragmented
+into arbitrary subword tokens during tokenization, which is a well-known weak point for LLM
+numeracy — especially with only ~195 fine-tuning steps to learn a mapping from that fragile
+representation to report content.
+
+**What this means for next steps**: this is now real, direct evidence (not just a
+theoretical concern from reading the paper) that Phase 4 — replacing the 36-number bottleneck
+with dense image embeddings — addresses a genuine, measured problem, not a hypothetical one.
+Two options going forward, different cost:
+- Cheap experiment: reformat the 36 scores into something more legible to a language model
+  (coarse categories or rounded percentages instead of raw floats) and see if that alone
+  helps, without touching the architecture.
+- The larger fix: build out Phase 4 as originally scaffolded.
+
+### Bug found and fixed along the way: negation detection in `eval_clinical.py`
+
+While diagnosing the above, `label_report()`'s negation check (a fixed 60-character lookback
+window) was found to miss common radiology phrasing like "No focal consolidation,
+pneumothorax, or pleural effusion" — by the time the window reaches "effusion" at the end of
+a negated list, it's often more than 60 characters past the "No" that negates the whole list.
+This produced false positives: negated findings were being labeled as present. Fixed by
+scoping the negation check to the current sentence (bounded by the nearest preceding period)
+instead of a fixed character count, which correctly handles negated lists of any length. This
+dropped the count of test examples flagged as having a genuine positive finding from 182/590
+to 131/590 — the difference is exactly the false positives this bug was producing.
 
 ## Engineering notes (useful if reproducing this yourself)
 
