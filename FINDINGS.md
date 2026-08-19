@@ -29,7 +29,7 @@ README — so everything here is a fresh build from the paper's Methods section,
 | Clinical-accuracy eval (`eval_clinical.py`) | Built, negation-detection bug found and fixed, ready |
 | Hallucination check (`hallucination_check.py`) | Built, tested on sample data, ready |
 | Inference script (`generate_reports.py`) | Built, decoding fixed (repetition penalty), verified |
-| Dense visual embeddings (Phase 4) | Scaffolded only — now has direct empirical motivation, not yet built |
+| Dense visual embeddings (Phase 4) | Data extraction built and verified (`data_prep_dense.py`); training integration not built |
 
 ## Key finding: the paper's stated learning rate does not reproduce
 
@@ -97,11 +97,11 @@ representation to report content.
 **What this means for next steps**: this is now real, direct evidence (not just a
 theoretical concern from reading the paper) that Phase 4 — replacing the 36-number bottleneck
 with dense image embeddings — addresses a genuine, measured problem, not a hypothetical one.
-Two options going forward, different cost:
-- Cheap experiment: reformat the 36 scores into something more legible to a language model
-  (coarse categories or rounded percentages instead of raw floats) and see if that alone
-  helps, without touching the architecture.
-- The larger fix: build out Phase 4 as originally scaffolded.
+The data-extraction half of that fix is built and verified (`data_prep_dense.py` — real
+1024-dim DenseNet-121 features per image, cached to disk); the harder half — modifying the
+training loop to actually inject those features as soft tokens into the model, bypassing the
+standard tokenized-text path — was scoped but not built, given the time and compute already
+invested in this reproduction. See Next Steps for the honest state of this.
 
 ### Bug found and fixed along the way: negation detection in `eval_clinical.py`
 
@@ -153,15 +153,34 @@ reading the paper alone:
   from the original source don't reliably distinguish frontal vs. lateral X-ray views, and
   using the same split as prior published methods keeps results comparable.
 
-## Next steps
+## Project status: complete for now
 
-1. Decide between: (a) writing this up as-is — a complete, honestly-documented reproduction
-   with two real findings and a well-motivated proposed extension — or (b) attempting a fix
-   for the output-collapse problem before writing up, either the cheap input-reformatting
-   experiment or the full Phase 4 dense-embeddings build.
-2. If pursuing a fix: rerun `generate_reports.py` on the full 590-example test set and
-   `eval_lexical.py` / `eval_clinical.py` / `hallucination_check.py` against it, to get
-   final numbers comparable to the paper's reported ROUGE-L 0.433 / METEOR 0.336 plus the
-   clinical-accuracy numbers the paper never measured.
-3. Either way, this findings log plus the working, tested Phase 2/3 eval scripts constitute
-   real, presentable material for a portfolio write-up regardless of which path is taken.
+This reproduction is being closed out at this point, deliberately — not because there's
+nothing left to do (there's a clear next step, below), but because the project already
+stands as complete, honest, evidenced work without it:
+
+- A working, tested, end-to-end reproduction pipeline (data prep → training → inference →
+  three evaluation methods), runnable on either Colab or Kaggle.
+- Two real findings, not assumptions: the paper's stated learning rate doesn't reproduce
+  (diagnosed and fixed), and the corrected model has a measured grounding problem (diagnosed
+  with controlled evidence, not just anecdote).
+- Two genuine contributions beyond the paper: a clinical-accuracy evaluator and a
+  hallucination-flagging check, filling gaps the paper's own Limitations section names but
+  doesn't fill.
+- A scoped, partially-built path to the architectural fix (Phase 4), with the safer,
+  lower-risk half (real image feature extraction) already built and verified.
+
+## If picking this back up later
+
+1. Build the training-loop integration for Phase 4: wire `VisualProjector` (in
+   `visual_embeddings.py`) and the cached features from `data_prep_dense.py` into
+   `train_baseline_v2.py`, replacing the tokenized 36-number input with injected soft
+   tokens. The open technical question is whether this pattern works cleanly with
+   Unsloth's patched model internals, or whether it needs standard HF Transformers + PEFT
+   instead (slower, but more predictable).
+2. Run `generate_reports.py` on the full 590-example test set (only a 20-example preview
+   and a handful of targeted diagnostic cases have been run so far) and get final
+   `eval_lexical.py` / `eval_clinical.py` / `hallucination_check.py` numbers to compare
+   against the paper's reported ROUGE-L 0.433 / METEOR 0.336.
+3. This findings log plus the working, tested Phase 2/3 eval scripts are real, presentable
+   material for a portfolio write-up as they stand today.
