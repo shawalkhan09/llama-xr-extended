@@ -88,6 +88,26 @@ This rules out both "coincidence" and "labeling error" as explanations. The mode
 what a radiology report *sounds like*, but not to ground its content in the actual input
 scores.
 
+**Confirmed at full scale.** Running `generate_reports.py` and all three eval scripts on the
+complete 590-example test set (not just the spot-checked cases above) makes this quantitative:
+
+| Metric | This model | Paper's reported value |
+|---|---|---|
+| BLEU-4 | 0.0073 | — |
+| ROUGE-L | 0.1182 | 0.433 |
+| METEOR | 0.1904 | 0.336 |
+| Clinical Macro-F1 | 0.018 | not measured by the paper |
+| Clinical Micro-F1 | 0.068 | not measured by the paper |
+| Hallucination flags | 0/590 | not measured by the paper |
+
+Lexical scores land well below the paper's claimed numbers (ROUGE-L at roughly a quarter of
+theirs). The clinical F1 numbers are the more telling result: a macro-F1 of 0.018 across 590
+cases means the model essentially isn't reliably producing the correct diagnosis, consistent
+with what the spot-checked examples showed. The hallucination check coming back clean (0/590
+flagged) shouldn't be read as reassuring on its own -- it more likely reflects the model
+defaulting to generic, low-commitment phrasing rather than making confident, checkable claims,
+which is the same underlying grounding problem showing up from a different angle.
+
 **Likely cause**: the 36 raw classifier-confidence floats are serialized as a JSON array
 string in the prompt (e.g. `"[0.599, 0.612, ...]"`). Floating-point numbers get fragmented
 into arbitrary subword tokens during tokenization, which is a well-known weak point for LLM
@@ -162,8 +182,9 @@ stands as complete, honest, evidenced work without it:
 - A working, tested, end-to-end reproduction pipeline (data prep → training → inference →
   three evaluation methods), runnable on either Colab or Kaggle.
 - Two real findings, not assumptions: the paper's stated learning rate doesn't reproduce
-  (diagnosed and fixed), and the corrected model has a measured grounding problem (diagnosed
-  with controlled evidence, not just anecdote).
+  (diagnosed and fixed), and the corrected model has a measured grounding problem — confirmed
+  quantitatively across the full 590-example test set (ROUGE-L 0.118 vs. the paper's claimed
+  0.433; clinical macro-F1 0.018), not just anecdotal spot-checks.
 - Two genuine contributions beyond the paper: a clinical-accuracy evaluator and a
   hallucination-flagging check, filling gaps the paper's own Limitations section names but
   doesn't fill.
@@ -178,9 +199,6 @@ stands as complete, honest, evidenced work without it:
    tokens. The open technical question is whether this pattern works cleanly with
    Unsloth's patched model internals, or whether it needs standard HF Transformers + PEFT
    instead (slower, but more predictable).
-2. Run `generate_reports.py` on the full 590-example test set (only a 20-example preview
-   and a handful of targeted diagnostic cases have been run so far) and get final
-   `eval_lexical.py` / `eval_clinical.py` / `hallucination_check.py` numbers to compare
-   against the paper's reported ROUGE-L 0.433 / METEOR 0.336.
-3. This findings log plus the working, tested Phase 2/3 eval scripts are real, presentable
-   material for a portfolio write-up as they stand today.
+2. This findings log plus the working, tested Phase 2/3 eval scripts, backed now by full
+   590-example numbers, are real, presentable material for a portfolio write-up as they
+   stand today.
