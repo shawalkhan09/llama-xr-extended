@@ -1,5 +1,10 @@
 # LLaMA-XR Extended - Chest X-ray Report Generation
 
+**Problem:** reproduce a 2026 paper that fine-tunes LLaMA 3.1 8B (QLoRA) to generate chest
+X-ray radiology reports from classifier scores - no code was released - then extend it with
+the clinical-accuracy and hallucination evals the paper's own Limitations section says are
+missing.
+
 **See [FINDINGS.md](FINDINGS.md) for the full progress log, technical issues encountered and
 fixed, and the key reproducibility finding on the paper's stated learning rate.**
 
@@ -28,6 +33,23 @@ second, deeper issue - the model doesn't ground its output in the actual input s
 are real, evidenced findings, documented in full in **[FINDINGS.md](FINDINGS.md)**, along with
 a scaffolded (data extraction built and verified, training integration not yet built) path to
 the architectural fix.
+
+Measured on the full 590-example IU X-ray test set, after the learning-rate fix (see
+[FINDINGS.md](FINDINGS.md) for the paper's exact hyperparameters and why they failed to learn
+the task at all):
+
+| Metric | This model | Paper's reported value |
+|---|---|---|
+| BLEU-4 | 0.0073 | - |
+| ROUGE-L | 0.1182 | 0.433 |
+| METEOR | 0.1904 | 0.336 |
+| Clinical Macro-F1 | 0.018 | not measured by the paper |
+| Clinical Micro-F1 | 0.068 | not measured by the paper |
+| Hallucination flags | 0/590 | not measured by the paper |
+
+Lexical scores land well below the paper's claimed numbers, and the low clinical F1 shows the
+model isn't reliably grounding output in the input scores - see FINDINGS.md's "Second finding"
+for the diagnosis and likely cause.
 
 ## The phases
 
